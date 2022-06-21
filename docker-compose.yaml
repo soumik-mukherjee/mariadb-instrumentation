@@ -1,0 +1,68 @@
+version: "3.9"
+services:
+  
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./etc/prometheus.yml:/etc/prometheus/prometheus.yml
+    command: 
+      - '--config.file=/etc/prometheus/prometheus.yml'
+  
+  mariadb:
+    image: mariadb:10.8.3
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: q1w2e3r4t5
+      MYSQL_USER: admin
+      MYSQL_DATABASE: demodb
+      MYSQL_PASSWORD: a1s2d3f4g5
+    volumes:
+      - ./data:/var/lib/mysql
+    ports:
+      - 3306:3306
+
+  mysql-exporter:
+    image: prom/mysqld-exporter
+    ports:
+      - 9104:9104
+    volumes:
+     - ./etc/.my.cnf:/root/.my.cnf
+    environment: 
+      - DATA_SOURCE_NAME=root:q1w2e3r4t5@(mariadb:3306)/demodb
+    command:
+      - '--collect.info_schema.tablestats'
+      - '--collect.info_schema.userstats'
+      - '--collect.info_schema.query_response_time'
+      - '--collect.auto_increment.columns'
+      - '--collect.binlog_size'
+      - '--collect.perf_schema.eventsstatements'
+      - '--collect.perf_schema.eventswaits'
+      - '--collect.perf_schema.file_events'
+      - '--collect.perf_schema.indexiowaits'
+      - '--collect.perf_schema.tableiowaits'
+      - '--collect.perf_schema.tablelocks'
+    links: 
+      - 'mariadb'
+
+  # Optional stuff,
+  adminer:
+    image: adminer
+    restart: always
+    ports: 
+      -  8080:8080
+
+  grafana:
+    image: grafana/grafana:8.2.6
+    container_name: grafana
+    volumes:
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=B1b33d7w0B7@r@t1
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    ports:
+      - 3000:3000
